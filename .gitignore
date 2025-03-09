@@ -1,0 +1,19 @@
+# Default ignored files
+/shelf/
+/.idea/workspace.xml
+# Editor-based HTTP Client requests
+/httpRequests/
+# Datasource local storage ignored files
+/dataSources/
+/dataSources.local.xml
+# Ignore IntelliJ IDEA project files
+.idea/
+*.iml
+# Ignore target directory
+target/
+# Ignore Maven wrapper properties
+.mvn/wrapper/maven-wrapper.properties
+# Ignore Maven config
+.mvn/maven.config
+# Ignore env file
+.env
