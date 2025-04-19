@@ -8,6 +8,7 @@ import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -21,11 +22,11 @@ public class ExperienceController {
     @Autowired
     ExperienceService experienceService;
 
-    @PostMapping("/categories/{categoryId}/experience/user/{userId}")
+    @PostMapping("/public/categories/{categoryId}/experience")
     public ResponseEntity<ExperienceDTO> addExperience (@Valid @RequestBody ExperienceDTO experienceDTO,
                                                         @PathVariable Long categoryId,
-                                                        @PathVariable Long userId){
-        ExperienceDTO savedExperienceDTO = experienceService.addExperience(categoryId, experienceDTO, userId);
+                                                        Authentication authentication){
+        ExperienceDTO savedExperienceDTO = experienceService.addExperience(categoryId, experienceDTO, authentication);
         return new ResponseEntity<> (savedExperienceDTO, HttpStatus.CREATED);
     }
 
@@ -60,26 +61,26 @@ public class ExperienceController {
         return new ResponseEntity<>(experienceResponse, HttpStatus.OK);
     }
 
-    @PutMapping ("/experience/{experienceId}/user/{userId}")
+    @PutMapping ("/public/experience/{experienceId}")
     public ResponseEntity<ExperienceDTO> updateExperience(@Valid @RequestBody ExperienceDTO experienceDTO,
                                                           @PathVariable Long experienceId,
-                                                          @PathVariable Long userId
-    ){
-        ExperienceDTO updatedExperienceDTO = experienceService.updateExperience(experienceId, experienceDTO, userId);
+                                                          Authentication authentication){
+        ExperienceDTO updatedExperienceDTO = experienceService.updateExperience(experienceId, experienceDTO, authentication);
         return new ResponseEntity<>(updatedExperienceDTO, HttpStatus.OK);
     }
 
-    @DeleteMapping("/experience/{experienceId}/user/{userId}")
+    @DeleteMapping("/public/experience/{experienceId}")
     public ResponseEntity<ExperienceDTO> deleteExperience(@PathVariable Long experienceId,
-                                                          @PathVariable Long userId){
-        ExperienceDTO deletedExperience = experienceService.deleteExperience(experienceId, userId);
+                                                          Authentication authentication){
+        ExperienceDTO deletedExperience = experienceService.deleteExperience(experienceId, authentication);
         return new ResponseEntity<>(deletedExperience, HttpStatus.OK);
     }
 
-    @PutMapping("/experience/{experienceId}/image")
+    @PutMapping("/public/experience/{experienceId}/image")
     public ResponseEntity<ExperienceDTO> updateExperienceImage(@PathVariable Long experienceId,
+                                                               Authentication authentication,
                                                                @RequestParam("image") MultipartFile image) throws IOException {
-        ExperienceDTO updatedExperience = experienceService.updateExperienceImage(experienceId, image);
+        ExperienceDTO updatedExperience = experienceService.updateExperienceImage(experienceId, image, authentication);
         return new ResponseEntity<>(updatedExperience, HttpStatus.OK);
     }
 }

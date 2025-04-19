@@ -17,3 +17,8 @@ target/
 .mvn/maven.config
 # Ignore env file
 .env
+# Ignore uploads
+uploads/*.jpeg
+# Ignore Maven wrapper files
+mvnw
+mvnw.cmd

@@ -3,12 +3,17 @@ package com.bucketlist.project.service;
 import com.bucketlist.project.exceptions.APIException;
 import com.bucketlist.project.exceptions.PermissionDeniedException;
 import com.bucketlist.project.exceptions.ResourceNotFoundException;
+import com.bucketlist.project.model.AppRole;
 import com.bucketlist.project.model.Category;
 import com.bucketlist.project.model.Experience;
+import com.bucketlist.project.model.User;
 import com.bucketlist.project.payload.ExperienceDTO;
 import com.bucketlist.project.payload.ExperienceResponse;
 import com.bucketlist.project.repositories.CategoryRepository;
 import com.bucketlist.project.repositories.ExperienceRepository;
+import com.bucketlist.project.repositories.UserRepository;
+import com.bucketlist.project.security.services.UserDetailsImpl;
+import jakarta.annotation.PostConstruct;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -16,6 +21,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -33,6 +39,9 @@ public class ExperienceServiceImpl implements ExperienceService {
     private CategoryRepository categoryRepository;
 
     @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
     private ModelMapper modelMapper;
 
     @Autowired
@@ -41,8 +50,19 @@ public class ExperienceServiceImpl implements ExperienceService {
     @Value("${file.upload-dir}")
     private String uploadDir;
 
+    @PostConstruct
+    public void setupModelMapper() {
+        modelMapper.typeMap(Experience.class, ExperienceDTO.class).addMappings(mapper -> {
+            mapper.map(src -> src.getCreatedBy().getUserId(), ExperienceDTO::setCreatedBy);
+            mapper.map(src -> src.getLastModifiedBy().getUserId(), ExperienceDTO::setLastModifiedBy);
+            mapper.map(src -> src.getCategory().getCategoryId(), ExperienceDTO::setCategoryId);
+            mapper.map(Experience::getExperienceImage, ExperienceDTO::setExperienceImage); // optional
+        });
+    }
+
     @Override
-    public ExperienceDTO addExperience(Long categoryId, ExperienceDTO experienceDTO, Long userId) {
+    public ExperienceDTO addExperience(Long categoryId, ExperienceDTO experienceDTO, Authentication authentication) {
+        User user = getAuthenticatedUser(authentication);
         Category category = categoryRepository.findById(categoryId)
                 .orElseThrow(() -> new ResourceNotFoundException("Category", "categoryId", categoryId));
 
@@ -59,10 +79,10 @@ public class ExperienceServiceImpl implements ExperienceService {
 
         if (isExpNotPresent){
             Experience experience = modelMapper.map(experienceDTO, Experience.class);
-            experience.setImgAddress("default.jpg");
+            experience.setExperienceImage("default.jpg");
             experience.setCategory(category);
-            experience.setAddedBy(userId);
-            experience.setLastModifiedBy(userId);
+            experience.setCreatedBy(user);
+            experience.setLastModifiedBy(user);
 
             Experience savedExperience = experienceRepository.save(experience);
             return modelMapper.map(savedExperience, ExperienceDTO.class);
@@ -159,49 +179,73 @@ public class ExperienceServiceImpl implements ExperienceService {
     }
 
     @Override
-    public ExperienceDTO updateExperience(Long experienceId, ExperienceDTO experienceDTO, Long userId) {
-        Experience experienceFromDB = experienceRepository.findById(experienceId)
-                .orElseThrow(() -> new ResourceNotFoundException("Experience", "experienceId", experienceId));
+    public ExperienceDTO updateExperience(Long experienceId, ExperienceDTO experienceDTO, Authentication authentication) {
+        Experience experienceFromDB = getExperienceById(experienceId);
+        User user = getAuthenticatedUser(authentication);
+
+        // Check if admin or user that added experience before allowing update
+        validateUserPermission(user, experienceFromDB, "update");
 
         Experience experience = modelMapper.map(experienceDTO, Experience.class);
 
-        // If admin or user that added experience
-        if (userId.equals(1001L) || experienceFromDB.getAddedBy().equals(userId)) {
         experienceFromDB.setExperienceName(experience.getExperienceName());
         experienceFromDB.setDescription(experience.getDescription());
-        experienceFromDB.setImgAddress(experience.getImgAddress());
-        experienceFromDB.setLastModifiedBy(userId);
+        experienceFromDB.setExperienceImage(experience.getExperienceImage());
+        experienceFromDB.setLastModifiedBy(user);
 
         Experience savedExperience = experienceRepository.save(experienceFromDB);
 
         return modelMapper.map(savedExperience, ExperienceDTO.class);
-        } else {
-            throw new PermissionDeniedException("UserId", userId, "experience", "update");
-        }
 
     }
 
     @Override
-    public ExperienceDTO deleteExperience(Long experienceId, Long userId) {
-        Experience experienceFromDB = experienceRepository.findById(experienceId)
-                .orElseThrow(() -> new ResourceNotFoundException("Experience", "experienceId", experienceId));
+    public ExperienceDTO deleteExperience(Long experienceId, Authentication authentication) {
+        Experience experience = getExperienceById(experienceId);
+        User user = getAuthenticatedUser(authentication);
 
-        // If admin or user that added experience
-        if (userId.equals(1001L) || experienceFromDB.getAddedBy().equals(userId)) {
-        experienceRepository.delete(experienceFromDB);
-        return modelMapper.map(experienceFromDB, ExperienceDTO.class);
-        } else {
-            throw new PermissionDeniedException("UserId", userId, "experience", "delete");
-        }
+        // Check if admin or user that added the experience before allowing delete
+        validateUserPermission(user, experience, "delete");
+
+        experienceRepository.delete(experience);
+        return modelMapper.map(experience, ExperienceDTO.class);
     }
 
     @Override
-    public ExperienceDTO updateExperienceImage(Long experienceId, MultipartFile image) throws IOException {
-        Experience experienceFromDB = experienceRepository.findById(experienceId)
-                .orElseThrow(() -> new ResourceNotFoundException("Experience", "experienceId", experienceId));
+    public ExperienceDTO updateExperienceImage(Long experienceId, MultipartFile image, Authentication authentication) throws IOException {
+        Experience experience = getExperienceById(experienceId);
+        User user = getAuthenticatedUser(authentication);
+
+        // Check if admin or user that added the experience before allowing update
+        validateUserPermission(user, experience, "update");
+
         String fileName = fileService.uploadImage(uploadDir, image);
-        experienceFromDB.setImgAddress(fileName);
-        Experience updatedExperience = experienceRepository.save(experienceFromDB);
+        experience.setExperienceImage(fileName);
+        Experience updatedExperience = experienceRepository.save(experience);
         return modelMapper.map(updatedExperience, ExperienceDTO.class);
     }
+
+    private Experience getExperienceById(Long experienceId) {
+        return experienceRepository.findById(experienceId)
+                .orElseThrow(() -> new ResourceNotFoundException("Experience", "experienceId", experienceId));
+    }
+
+    private User getAuthenticatedUser(Authentication authentication) {
+        UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
+
+        return userRepository.findById(userDetails.getUserId())
+                .orElseThrow(() -> new ResourceNotFoundException("User", "userId", userDetails.getUserId()));
+    }
+
+    private void validateUserPermission(User user, Experience experience, String action) {
+        boolean isAdmin = user.getRole().getRoleName() == AppRole.ROLE_ADMIN;
+        boolean isOwner = experience.getCreatedBy().getUserId().equals(user.getUserId());
+
+        if (!isAdmin && !isOwner) {
+            throw new PermissionDeniedException("UserId", user.getUserId(), "experience", action);
+        }
+    }
+
+
+
 }
