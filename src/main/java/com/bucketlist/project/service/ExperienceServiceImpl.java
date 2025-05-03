@@ -3,17 +3,16 @@ package com.bucketlist.project.service;
 import com.bucketlist.project.exceptions.APIException;
 import com.bucketlist.project.exceptions.PermissionDeniedException;
 import com.bucketlist.project.exceptions.ResourceNotFoundException;
-import com.bucketlist.project.model.AppRole;
-import com.bucketlist.project.model.Category;
-import com.bucketlist.project.model.Experience;
-import com.bucketlist.project.model.User;
+import com.bucketlist.project.model.*;
 import com.bucketlist.project.payload.ExperienceDTO;
 import com.bucketlist.project.payload.ExperienceResponse;
+import com.bucketlist.project.repositories.BucketListExpRepository;
 import com.bucketlist.project.repositories.CategoryRepository;
 import com.bucketlist.project.repositories.ExperienceRepository;
 import com.bucketlist.project.repositories.UserRepository;
-import com.bucketlist.project.security.services.UserDetailsImpl;
+import com.bucketlist.project.util.AuthUtil;
 import jakarta.annotation.PostConstruct;
+import jakarta.transaction.Transactional;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -21,7 +20,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -36,10 +34,16 @@ public class ExperienceServiceImpl implements ExperienceService {
     private ExperienceRepository experienceRepository;
 
     @Autowired
+    private BucketListExpRepository bucketListExpRepository;
+
+    @Autowired
     private CategoryRepository categoryRepository;
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private AuthUtil authUtil;
 
     @Autowired
     private ModelMapper modelMapper;
@@ -61,8 +65,8 @@ public class ExperienceServiceImpl implements ExperienceService {
     }
 
     @Override
-    public ExperienceDTO addExperience(Long categoryId, ExperienceDTO experienceDTO, Authentication authentication) {
-        User user = getAuthenticatedUser(authentication);
+    public ExperienceDTO addExperience(Long categoryId, ExperienceDTO experienceDTO) {
+        User user = authUtil.loggedInUser();
         Category category = categoryRepository.findById(categoryId)
                 .orElseThrow(() -> new ResourceNotFoundException("Category", "categoryId", categoryId));
 
@@ -179,9 +183,9 @@ public class ExperienceServiceImpl implements ExperienceService {
     }
 
     @Override
-    public ExperienceDTO updateExperience(Long experienceId, ExperienceDTO experienceDTO, Authentication authentication) {
+    public ExperienceDTO updateExperience(Long experienceId, ExperienceDTO experienceDTO) {
         Experience experienceFromDB = getExperienceById(experienceId);
-        User user = getAuthenticatedUser(authentication);
+        User user = authUtil.loggedInUser();;
 
         // Check if admin or user that added experience before allowing update
         validateUserPermission(user, experienceFromDB, "update");
@@ -200,21 +204,28 @@ public class ExperienceServiceImpl implements ExperienceService {
     }
 
     @Override
-    public ExperienceDTO deleteExperience(Long experienceId, Authentication authentication) {
+    @Transactional
+    public ExperienceDTO deleteExperience(Long experienceId) {
         Experience experience = getExperienceById(experienceId);
-        User user = getAuthenticatedUser(authentication);
+        User user = authUtil.loggedInUser();
 
-        // Check if admin or user that added the experience before allowing delete
         validateUserPermission(user, experience, "delete");
 
+        // Delete related bucket list entries
+        bucketListExpRepository.deleteAllByExperienceId(experience.getExperienceId());
+
+        // No need to clear() the list if fetch = LAZY and you didn’t touch it
+
         experienceRepository.delete(experience);
+
         return modelMapper.map(experience, ExperienceDTO.class);
     }
 
+
     @Override
-    public ExperienceDTO updateExperienceImage(Long experienceId, MultipartFile image, Authentication authentication) throws IOException {
+    public ExperienceDTO updateExperienceImage(Long experienceId, MultipartFile image) throws IOException {
         Experience experience = getExperienceById(experienceId);
-        User user = getAuthenticatedUser(authentication);
+        User user = authUtil.loggedInUser();;
 
         // Check if admin or user that added the experience before allowing update
         validateUserPermission(user, experience, "update");
@@ -228,13 +239,6 @@ public class ExperienceServiceImpl implements ExperienceService {
     private Experience getExperienceById(Long experienceId) {
         return experienceRepository.findById(experienceId)
                 .orElseThrow(() -> new ResourceNotFoundException("Experience", "experienceId", experienceId));
-    }
-
-    private User getAuthenticatedUser(Authentication authentication) {
-        UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
-
-        return userRepository.findById(userDetails.getUserId())
-                .orElseThrow(() -> new ResourceNotFoundException("User", "userId", userDetails.getUserId()));
     }
 
     private void validateUserPermission(User user, Experience experience, String action) {

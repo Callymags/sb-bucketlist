@@ -8,7 +8,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 
 public interface ExperienceService {
-    ExperienceDTO addExperience(Long categoryId, ExperienceDTO experience, Authentication authentication);
+    ExperienceDTO addExperience(Long categoryId, ExperienceDTO experience);
 
     ExperienceResponse getAllExperiences(Integer pageNumber, Integer pageSize, String sortBy, String sortOrder);
 
@@ -16,9 +16,9 @@ public interface ExperienceService {
 
     ExperienceResponse searchExperienceByKeyword(String keyword, Integer pageNumber, Integer pageSize, String sortBy, String sortOrder);
 
-    ExperienceDTO updateExperience(Long experienceId, ExperienceDTO experience, Authentication authentication);
+    ExperienceDTO updateExperience(Long experienceId, ExperienceDTO experience);
 
-    ExperienceDTO deleteExperience(Long experienceId, Authentication authentication);
+    ExperienceDTO deleteExperience(Long experienceId);
 
-    ExperienceDTO updateExperienceImage(Long experienceId, MultipartFile image, Authentication authentication) throws IOException;
+    ExperienceDTO updateExperienceImage(Long experienceId, MultipartFile image) throws IOException;
 }

@@ -22,15 +22,14 @@ public class ExperienceController {
     @Autowired
     ExperienceService experienceService;
 
-    @PostMapping("/public/categories/{categoryId}/experience")
+    @PostMapping("/categories/{categoryId}/experience")
     public ResponseEntity<ExperienceDTO> addExperience (@Valid @RequestBody ExperienceDTO experienceDTO,
-                                                        @PathVariable Long categoryId,
-                                                        Authentication authentication){
-        ExperienceDTO savedExperienceDTO = experienceService.addExperience(categoryId, experienceDTO, authentication);
-        return new ResponseEntity<> (savedExperienceDTO, HttpStatus.CREATED);
+                                                        @PathVariable Long categoryId){
+        ExperienceDTO savedExperienceDTO = experienceService.addExperience(categoryId, experienceDTO);
+        return new ResponseEntity<>(savedExperienceDTO, HttpStatus.CREATED);
     }
 
-    @GetMapping("/public/experiences")
+    @GetMapping("/experiences")
     public ResponseEntity<ExperienceResponse> getAllExperiences(
             @RequestParam(name = "pageNumber", defaultValue = AppConstants.PAGE_NUMBER, required = false) Integer pageNumber,
             @RequestParam(name = "pageSize", defaultValue = AppConstants.PAGE_SIZE, required = false) Integer pageSize,
@@ -41,7 +40,7 @@ public class ExperienceController {
         return new ResponseEntity<>(experienceResponse, HttpStatus.OK);
     }
 
-    @GetMapping("/public/categories/{categoryId}/experiences")
+    @GetMapping("/categories/{categoryId}/experiences")
     public ResponseEntity<ExperienceResponse> getExperiencesByCategory(@PathVariable Long categoryId,
                                                                        @RequestParam(name = "pageNumber", defaultValue = AppConstants.PAGE_NUMBER, required = false) Integer pageNumber,
                                                                        @RequestParam(name = "pageSize", defaultValue = AppConstants.PAGE_SIZE, required = false) Integer pageSize,
@@ -51,7 +50,7 @@ public class ExperienceController {
         return new ResponseEntity<>(experienceResponse, HttpStatus.OK);
     }
 
-    @GetMapping("/public/experiences/keyword/{keyword}")
+    @GetMapping("/experiences/keyword/{keyword}")
     public ResponseEntity<ExperienceResponse> getExperienceByKeyword(@PathVariable String keyword,
                                                                      @RequestParam(name = "pageNumber", defaultValue = AppConstants.PAGE_NUMBER, required = false) Integer pageNumber,
                                                                      @RequestParam(name = "pageSize", defaultValue = AppConstants.PAGE_SIZE, required = false) Integer pageSize,
@@ -61,26 +60,30 @@ public class ExperienceController {
         return new ResponseEntity<>(experienceResponse, HttpStatus.OK);
     }
 
-    @PutMapping ("/public/experience/{experienceId}")
+    @PutMapping ("/experience/{experienceId}")
     public ResponseEntity<ExperienceDTO> updateExperience(@Valid @RequestBody ExperienceDTO experienceDTO,
-                                                          @PathVariable Long experienceId,
-                                                          Authentication authentication){
-        ExperienceDTO updatedExperienceDTO = experienceService.updateExperience(experienceId, experienceDTO, authentication);
+                                                          @PathVariable Long experienceId){
+        ExperienceDTO updatedExperienceDTO = experienceService.updateExperience(experienceId, experienceDTO);
         return new ResponseEntity<>(updatedExperienceDTO, HttpStatus.OK);
     }
 
-    @DeleteMapping("/public/experience/{experienceId}")
-    public ResponseEntity<ExperienceDTO> deleteExperience(@PathVariable Long experienceId,
-                                                          Authentication authentication){
-        ExperienceDTO deletedExperience = experienceService.deleteExperience(experienceId, authentication);
+//    @DeleteMapping("/public/experience/{experienceId}")
+//    public ResponseEntity<ExperienceDTO> deleteExperience(@PathVariable Long experienceId,
+//                                                          Authentication authentication){
+//        ExperienceDTO deletedExperience = experienceService.deleteExperience(experienceId, authentication);
+//        return new ResponseEntity<>(deletedExperience, HttpStatus.OK);
+//    }
+
+    @DeleteMapping("/experience/{experienceId}")
+    public ResponseEntity<ExperienceDTO> deleteExperience(@PathVariable Long experienceId) {
+        ExperienceDTO deletedExperience = experienceService.deleteExperience(experienceId);
         return new ResponseEntity<>(deletedExperience, HttpStatus.OK);
     }
 
-    @PutMapping("/public/experience/{experienceId}/image")
+    @PutMapping("/experience/{experienceId}/image")
     public ResponseEntity<ExperienceDTO> updateExperienceImage(@PathVariable Long experienceId,
-                                                               Authentication authentication,
                                                                @RequestParam("image") MultipartFile image) throws IOException {
-        ExperienceDTO updatedExperience = experienceService.updateExperienceImage(experienceId, image, authentication);
+        ExperienceDTO updatedExperience = experienceService.updateExperienceImage(experienceId, image);
         return new ResponseEntity<>(updatedExperience, HttpStatus.OK);
     }
 }

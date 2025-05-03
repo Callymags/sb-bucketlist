@@ -3,10 +3,10 @@ package com.bucketlist.project.model;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.*;
 
+import java.util.ArrayList;
 import java.util.List;
 
 
@@ -42,9 +42,7 @@ public class Experience {
     @JoinColumn(name = "last_modified_by", referencedColumnName = "userId")
     private User lastModifiedBy;
 
-    @OneToMany(mappedBy = "experience", cascade = CascadeType.ALL, orphanRemoval = true)
-    @ToString.Exclude
-    @EqualsAndHashCode.Exclude
-    private List<BucketListExperience> savedByUsers;
+    @OneToMany(mappedBy = "experience", cascade = {CascadeType.PERSIST, CascadeType.MERGE}, fetch = FetchType.LAZY)
+    private List<BucketListExp> bucketListExps = new ArrayList<>();
 
 }

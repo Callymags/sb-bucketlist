@@ -51,10 +51,9 @@ public class User {
     @JoinColumn(name = "roleId", nullable = false)
     private Role role;
 
-    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     @ToString.Exclude
-    @EqualsAndHashCode.Exclude
-    private List<BucketListExperience> savedExperiences = new ArrayList<>();
+    @OneToOne(mappedBy = "user", cascade = {CascadeType.PERSIST, CascadeType.MERGE}, orphanRemoval = true)
+    private BucketList bucketList;
 
 
 }

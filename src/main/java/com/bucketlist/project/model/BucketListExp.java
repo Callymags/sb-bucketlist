@@ -10,16 +10,16 @@ import java.time.LocalDate;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "bucketlist_experiences")
-public class BucketListExperience {
+@Table(name = "bucket_list_exps")
+public class BucketListExp {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private Long bucketListExpId;
 
     @ManyToOne
-    @JoinColumn(name = "user_id")
-    private User user;
+    @JoinColumn(name = "bucket_list_id")
+    private BucketList bucketList;
 
     @ManyToOne
     @JoinColumn(name = "experience_id")

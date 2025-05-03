@@ -1,11 +1,15 @@
 package com.bucketlist.project.service;
 
 import com.bucketlist.project.exceptions.APIException;
+import com.bucketlist.project.exceptions.PermissionDeniedException;
 import com.bucketlist.project.exceptions.ResourceNotFoundException;
+import com.bucketlist.project.model.AppRole;
 import com.bucketlist.project.model.Category;
+import com.bucketlist.project.model.User;
 import com.bucketlist.project.payload.CategoryDTO;
 import com.bucketlist.project.payload.CategoryResponse;
 import com.bucketlist.project.repositories.CategoryRepository;
+import com.bucketlist.project.util.AuthUtil;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -23,6 +27,9 @@ public class CategoryServiceImpl implements CategoryService{
 
     @Autowired
     private CategoryRepository categoryRepository;
+
+    @Autowired
+    private AuthUtil authUtil;
 
     @Autowired
     private ModelMapper modelMapper;
@@ -55,6 +62,11 @@ public class CategoryServiceImpl implements CategoryService{
 
     @Override
     public CategoryDTO createCategory(CategoryDTO categoryDTO) {
+        User user = authUtil.loggedInUser();
+        if (user.getRole().getRoleName() != AppRole.ROLE_ADMIN) {
+            throw new PermissionDeniedException("User", user.getUserId(), "category", "create");
+        }
+
         Category category = modelMapper.map(categoryDTO, Category.class);
         Category dbCategory = categoryRepository.findByCategoryName(category.getCategoryName());
         if (dbCategory != null){
@@ -67,6 +79,11 @@ public class CategoryServiceImpl implements CategoryService{
 
     @Override
     public CategoryDTO deleteCategory(Long categoryId) {
+        User user = authUtil.loggedInUser();
+        if (user.getRole().getRoleName() != AppRole.ROLE_ADMIN) {
+            throw new PermissionDeniedException("User", user.getUserId(), "category", "delete");
+        }
+
         Category category = categoryRepository.findById(categoryId)
                 .orElseThrow(() -> new ResourceNotFoundException("Category", "categoryId", categoryId));
 
@@ -76,6 +93,11 @@ public class CategoryServiceImpl implements CategoryService{
 
     @Override
     public CategoryDTO updateCategory(CategoryDTO categoryDTO, Long categoryId) {
+        User user = authUtil.loggedInUser();
+        if (user.getRole().getRoleName() != AppRole.ROLE_ADMIN) {
+            throw new PermissionDeniedException("User", user.getUserId(), "category", "update");
+        }
+
         Category savedCategory = categoryRepository.findById(categoryId)
                 .orElseThrow(() -> new ResourceNotFoundException("Category", "categoryId", categoryId));
 
