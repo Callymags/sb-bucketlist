@@ -1,7 +1,6 @@
 package com.bucketlist.project.service;
 
 import com.bucketlist.project.exceptions.APIException;
-import com.bucketlist.project.exceptions.PermissionDeniedException;
 import com.bucketlist.project.exceptions.ResourceNotFoundException;
 import com.bucketlist.project.model.*;
 import com.bucketlist.project.payload.BucketListDTO;
@@ -18,7 +17,6 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 @Service
 public class BucketListServiceImpl implements BucketListService {
@@ -66,18 +64,7 @@ public class BucketListServiceImpl implements BucketListService {
         BucketListDTO bucketListDTO = modelMapper.map(bucketList, BucketListDTO.class);
 
         // Map each BucketListExp to BucketListExpDTO
-        List<BucketListExpDTO> bucketListExpDTOs = bucketList.getBucketListExps().stream()
-                .map(exp -> {
-                    ExperienceDTO experienceDTO = modelMapper.map(exp.getExperience(), ExperienceDTO.class);
-                    BucketListExpDTO bucketListExpDTO = new BucketListExpDTO();
-                    bucketListExpDTO.setBucketListExperienceId(exp.getBucketListExpId());
-                    bucketListExpDTO.setBucketList(null); // prevent recursion
-                    bucketListExpDTO.setExperience(experienceDTO);
-                    bucketListExpDTO.setDateSaved(exp.getDateSaved());
-                    bucketListExpDTO.setCompleted(exp.isCompleted());
-                    return bucketListExpDTO;
-                })
-                .collect(Collectors.toList());
+        List<BucketListExpDTO> bucketListExpDTOs = mapBucketListExps(bucketList.getBucketListExps());
 
         bucketListDTO.setBucketListExps(bucketListExpDTOs);
 
@@ -86,11 +73,7 @@ public class BucketListServiceImpl implements BucketListService {
 
     @Override
     public List<BucketListDTO> getBucketLists() {
-        User currentUser = authUtil.loggedInUser();
-
-        if (!currentUser.getRole().getRoleName().equals(AppRole.ROLE_ADMIN)) {
-            throw new PermissionDeniedException("User", currentUser.getUserId(), "bucket lists", "view all");
-        }
+        authUtil.checkAdmin("bucket lists", "view all");
 
         List<BucketList> bucketLists = bucketListRepository.findAll();
 
@@ -99,57 +82,13 @@ public class BucketListServiceImpl implements BucketListService {
         }
 
         List<BucketListDTO> bucketListDTOs = bucketLists.stream().map(bucketList -> {
-            BucketListDTO bucketListDTO = modelMapper.map(bucketList, BucketListDTO.class);
-
-            List<BucketListExpDTO> bucketListExpDTOs = bucketList.getBucketListExps().stream()
-                    .map(exp -> {
-                        ExperienceDTO experienceDTO = modelMapper.map(exp.getExperience(), ExperienceDTO.class);
-                        BucketListExpDTO bucketListExpDTO = new BucketListExpDTO();
-                        bucketListExpDTO.setBucketListExperienceId(exp.getBucketListExpId());
-                        bucketListExpDTO.setBucketList(null); // prevent recursion
-                        bucketListExpDTO.setExperience(experienceDTO);
-                        bucketListExpDTO.setDateSaved(exp.getDateSaved());
-                        bucketListExpDTO.setCompleted(exp.isCompleted());
-                        return bucketListExpDTO;
-                    })
-                    .collect(Collectors.toList());
-
-            bucketListDTO.setBucketListExps(bucketListExpDTOs);
-
-            return bucketListDTO;
+            BucketListDTO dto = modelMapper.map(bucketList, BucketListDTO.class);
+            dto.setBucketListExps(mapBucketListExps(bucketList.getBucketListExps()));
+            return dto;
         }).collect(Collectors.toList());
 
         return bucketListDTOs;
     }
-
-//    @Override
-//    public BucketListDTO getUserBucketList(Long bucketListId) {
-//        String loggedInEmail = authUtil.loggedInEmail();
-//        BucketList bucketList = bucketListRepository.findBucketListByEmailAndBucketListID(loggedInEmail, bucketListId);
-//
-//        if (bucketList == null) {
-//            throw new ResourceNotFoundException("BucketList", "bucketListId", bucketListId);
-//        }
-//
-//        BucketListDTO bucketListDTO = modelMapper.map(bucketList, BucketListDTO.class);
-//
-//        List<BucketListExpDTO> bucketListExpDTOs = bucketList.getBucketListExps().stream()
-//                .map(exp -> {
-//                    ExperienceDTO experienceDTO = modelMapper.map(exp.getExperience(), ExperienceDTO.class);
-//                    BucketListExpDTO bucketListExpDTO = new BucketListExpDTO();
-//                    bucketListExpDTO.setBucketListExperienceId(exp.getBucketListExpId());
-//                    bucketListExpDTO.setBucketList(null); // to avoid infinite recursion
-//                    bucketListExpDTO.setExperience(experienceDTO);
-//                    bucketListExpDTO.setDateSaved(exp.getDateSaved());
-//                    bucketListExpDTO.setCompleted(exp.isCompleted());
-//                    return bucketListExpDTO;
-//                })
-//                .collect(Collectors.toList());
-//
-//        bucketListDTO.setBucketListExps(bucketListExpDTOs);
-//
-//        return bucketListDTO;
-//    }
 
     @Override
     public BucketListDTO getUserBucketList() {
@@ -161,73 +100,33 @@ public class BucketListServiceImpl implements BucketListService {
         }
 
         BucketListDTO bucketListDTO = modelMapper.map(bucketList, BucketListDTO.class);
-
-        List<BucketListExpDTO> bucketListExpDTOs = bucketList.getBucketListExps().stream()
-                .map(exp -> {
-                    ExperienceDTO experienceDTO = modelMapper.map(exp.getExperience(), ExperienceDTO.class);
-                    BucketListExpDTO bucketListExpDTO = new BucketListExpDTO();
-                    bucketListExpDTO.setBucketListExperienceId(exp.getBucketListExpId());
-                    bucketListExpDTO.setBucketList(null); // prevent recursion
-                    bucketListExpDTO.setExperience(experienceDTO);
-                    bucketListExpDTO.setDateSaved(exp.getDateSaved());
-                    bucketListExpDTO.setCompleted(exp.isCompleted());
-                    return bucketListExpDTO;
-                })
-                .collect(Collectors.toList());
-
-        bucketListDTO.setBucketListExps(bucketListExpDTOs);
+        bucketListDTO.setBucketListExps(mapBucketListExps(bucketList.getBucketListExps()));
         return bucketListDTO;
     }
-
 
     @Transactional
     @Override
     public BucketListDTO updateBucketListExpStatus(Long bucketListId, Long bucketListExpId, boolean completed) {
-        String emailId = authUtil.loggedInEmail();
-        BucketList userBucketList = bucketListRepository.findBucketListByEmail(emailId);
+        BucketList bucketList = bucketListRepository.findById(bucketListId)
+                .orElseThrow(() -> new ResourceNotFoundException("Bucket List", "bucketListId", bucketListId));
 
-        if (userBucketList == null) {
-            throw new ResourceNotFoundException("Bucket List", "email", emailId);
-        }
+        authUtil.checkOwnerOrAdmin(authUtil.loggedInUser(), bucketList.getUser(), "bucket list", "update experience status");
 
-        // Verify that the logged-in user owns this bucket list
-        if (!userBucketList.getBucketListId().equals(bucketListId)) {
-            throw new APIException("You do not have permission to modify this bucket list.");
-        }
-
-        // Find the specific BucketListExp by bucketListId and bucketListExpId
         BucketListExp bucketListExp = bucketListExpRepository.findById(bucketListExpId)
                 .orElseThrow(() -> new ResourceNotFoundException("BucketListExp", "bucketListExpId", bucketListExpId));
 
-        // Extra check to make sure the experience belongs to this user's bucket list
         if (!bucketListExp.getBucketList().getBucketListId().equals(bucketListId)) {
-            throw new APIException("This experience does not belong to your bucket list.");
+            throw new APIException("This experience does not belong to the specified bucket list.");
         }
 
-        // Update the status
         bucketListExp.setCompleted(completed);
         bucketListExpRepository.save(bucketListExp);
 
-        // Map the updated bucket list
-        BucketListDTO bucketListDTO = modelMapper.map(userBucketList, BucketListDTO.class);
-
-        List<BucketListExpDTO> bucketListExpDTOs = userBucketList.getBucketListExps().stream()
-                .map(exp -> {
-                    ExperienceDTO experienceDTO = modelMapper.map(exp.getExperience(), ExperienceDTO.class);
-                    BucketListExpDTO bucketListExpDTO = new BucketListExpDTO();
-                    bucketListExpDTO.setBucketListExperienceId(exp.getBucketListExpId());
-                    bucketListExpDTO.setBucketList(null); // prevent recursion
-                    bucketListExpDTO.setExperience(experienceDTO);
-                    bucketListExpDTO.setDateSaved(exp.getDateSaved());
-                    bucketListExpDTO.setCompleted(exp.isCompleted());
-                    return bucketListExpDTO;
-                })
-                .collect(Collectors.toList());
-
-        bucketListDTO.setBucketListExps(bucketListExpDTOs);
-
+        BucketListDTO bucketListDTO = modelMapper.map(bucketList, BucketListDTO.class);
+        bucketListDTO.setBucketListExps(mapBucketListExps(bucketList.getBucketListExps()));
         return bucketListDTO;
     }
+
 
     @Override
     @Transactional
@@ -238,10 +137,7 @@ public class BucketListServiceImpl implements BucketListService {
                 .orElseThrow(() -> new ResourceNotFoundException("Bucket List", "bucketListId", bucketListId));
 
         // Permission check
-        if (!bucketList.getUser().getUserId().equals(currentUser.getUserId()) &&
-                !currentUser.getRole().getRoleName().equals(AppRole.ROLE_ADMIN)) {
-            throw new PermissionDeniedException("User", currentUser.getUserId(), "bucket list", "delete experience from");
-        }
+        authUtil.checkOwnerOrAdmin(currentUser, bucketList.getUser(), "bucket list", "delete experience from");
 
         BucketListExp bucketListExp = bucketListExpRepository.findById(bucketListExpId)
                 .orElseThrow(() -> new ResourceNotFoundException("BucketListExp", "bucketListExpId", bucketListExpId));
@@ -256,30 +152,6 @@ public class BucketListServiceImpl implements BucketListService {
         return "Experience " + bucketListExp.getExperience().getExperienceName() + " removed from the bucket list.";
     }
 
-//    @Override
-//    public String deleteExpFromBucketList(Long bucketListId, Long experienceId) {
-//        User currentUser = authUtil.loggedInUser();
-//
-//        BucketList bucketList = bucketListRepository.findById(bucketListId)
-//                .orElseThrow(() -> new ResourceNotFoundException("Bucket List", "bucketListId", bucketListId));
-//
-//        // Check if the current user owns the bucket list or is an admin
-//        if (!bucketList.getUser().getUserId().equals(currentUser.getUserId()) &&
-//                !currentUser.getRole().getRoleName().equals(AppRole.ROLE_ADMIN)) {
-//            throw new PermissionDeniedException("User", currentUser.getUserId(), "bucket list", "delete experience from");
-//        }
-//
-//        BucketListExp bucketListExp = bucketListExpRepository.findByBucketListExpIdAndBucketListId(bucketListId, experienceId);
-//
-//        if (bucketListExp == null) {
-//            throw new ResourceNotFoundException("Experience", "experienceId", experienceId);
-//        }
-//
-//        bucketListExpRepository.deleteBucketListExpByExpIdAndBucketListId(bucketListId, experienceId);
-//
-//        return "Experience " + bucketListExp.getExperience().getExperienceName() + " removed from the bucket list.";
-//    }
-
     private BucketList createBucketList() {
         BucketList userBucketList = bucketListRepository.findBucketListByEmail((authUtil.loggedInEmail()));
         if(userBucketList != null){
@@ -291,5 +163,18 @@ public class BucketListServiceImpl implements BucketListService {
         BucketList newBucketList = bucketListRepository.save(bucketList);
 
         return newBucketList;
+    }
+
+    private List<BucketListExpDTO> mapBucketListExps(List<BucketListExp> exps) {
+        return exps.stream().map(exp -> {
+            ExperienceDTO experienceDTO = modelMapper.map(exp.getExperience(), ExperienceDTO.class);
+            BucketListExpDTO dto = new BucketListExpDTO();
+            dto.setBucketListExperienceId(exp.getBucketListExpId());
+            dto.setBucketList(null); // prevent recursion
+            dto.setExperience(experienceDTO);
+            dto.setDateSaved(exp.getDateSaved());
+            dto.setCompleted(exp.isCompleted());
+            return dto;
+        }).collect(Collectors.toList());
     }
 }

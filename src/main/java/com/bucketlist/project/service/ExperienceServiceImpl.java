@@ -185,17 +185,15 @@ public class ExperienceServiceImpl implements ExperienceService {
     @Override
     public ExperienceDTO updateExperience(Long experienceId, ExperienceDTO experienceDTO) {
         Experience experienceFromDB = getExperienceById(experienceId);
-        User user = authUtil.loggedInUser();;
-
-        // Check if admin or user that added experience before allowing update
-        validateUserPermission(user, experienceFromDB, "update");
+        User currentUser = authUtil.loggedInUser();
+        authUtil.checkOwnerOrAdmin(currentUser, experienceFromDB.getCreatedBy(), "experience", "update");
 
         Experience experience = modelMapper.map(experienceDTO, Experience.class);
 
         experienceFromDB.setExperienceName(experience.getExperienceName());
         experienceFromDB.setDescription(experience.getDescription());
         experienceFromDB.setExperienceImage(experience.getExperienceImage());
-        experienceFromDB.setLastModifiedBy(user);
+        experienceFromDB.setLastModifiedBy(currentUser);
 
         Experience savedExperience = experienceRepository.save(experienceFromDB);
 
@@ -207,14 +205,12 @@ public class ExperienceServiceImpl implements ExperienceService {
     @Transactional
     public ExperienceDTO deleteExperience(Long experienceId) {
         Experience experience = getExperienceById(experienceId);
-        User user = authUtil.loggedInUser();
 
-        validateUserPermission(user, experience, "delete");
+        User currentUser = authUtil.loggedInUser();
+        authUtil.checkOwnerOrAdmin(currentUser, experience.getCreatedBy(), "experience", "delete");
 
         // Delete related bucket list entries
         bucketListExpRepository.deleteAllByExperienceId(experience.getExperienceId());
-
-        // No need to clear() the list if fetch = LAZY and you didn’t touch it
 
         experienceRepository.delete(experience);
 
@@ -225,10 +221,9 @@ public class ExperienceServiceImpl implements ExperienceService {
     @Override
     public ExperienceDTO updateExperienceImage(Long experienceId, MultipartFile image) throws IOException {
         Experience experience = getExperienceById(experienceId);
-        User user = authUtil.loggedInUser();;
+        User currentUser = authUtil.loggedInUser();
+        authUtil.checkOwnerOrAdmin(currentUser, experience.getCreatedBy(), "experience", "update");
 
-        // Check if admin or user that added the experience before allowing update
-        validateUserPermission(user, experience, "update");
 
         String fileName = fileService.uploadImage(uploadDir, image);
         experience.setExperienceImage(fileName);
@@ -240,16 +235,5 @@ public class ExperienceServiceImpl implements ExperienceService {
         return experienceRepository.findById(experienceId)
                 .orElseThrow(() -> new ResourceNotFoundException("Experience", "experienceId", experienceId));
     }
-
-    private void validateUserPermission(User user, Experience experience, String action) {
-        boolean isAdmin = user.getRole().getRoleName() == AppRole.ROLE_ADMIN;
-        boolean isOwner = experience.getCreatedBy().getUserId().equals(user.getUserId());
-
-        if (!isAdmin && !isOwner) {
-            throw new PermissionDeniedException("UserId", user.getUserId(), "experience", action);
-        }
-    }
-
-
 
 }

@@ -62,10 +62,7 @@ public class CategoryServiceImpl implements CategoryService{
 
     @Override
     public CategoryDTO createCategory(CategoryDTO categoryDTO) {
-        User user = authUtil.loggedInUser();
-        if (user.getRole().getRoleName() != AppRole.ROLE_ADMIN) {
-            throw new PermissionDeniedException("User", user.getUserId(), "category", "create");
-        }
+        authUtil.checkAdmin("category", "create");
 
         Category category = modelMapper.map(categoryDTO, Category.class);
         Category dbCategory = categoryRepository.findByCategoryName(category.getCategoryName());
@@ -79,10 +76,7 @@ public class CategoryServiceImpl implements CategoryService{
 
     @Override
     public CategoryDTO deleteCategory(Long categoryId) {
-        User user = authUtil.loggedInUser();
-        if (user.getRole().getRoleName() != AppRole.ROLE_ADMIN) {
-            throw new PermissionDeniedException("User", user.getUserId(), "category", "delete");
-        }
+        authUtil.checkAdmin("category", "delete");
 
         Category category = categoryRepository.findById(categoryId)
                 .orElseThrow(() -> new ResourceNotFoundException("Category", "categoryId", categoryId));
@@ -93,10 +87,7 @@ public class CategoryServiceImpl implements CategoryService{
 
     @Override
     public CategoryDTO updateCategory(CategoryDTO categoryDTO, Long categoryId) {
-        User user = authUtil.loggedInUser();
-        if (user.getRole().getRoleName() != AppRole.ROLE_ADMIN) {
-            throw new PermissionDeniedException("User", user.getUserId(), "category", "update");
-        }
+        authUtil.checkAdmin("category", "update");
 
         Category savedCategory = categoryRepository.findById(categoryId)
                 .orElseThrow(() -> new ResourceNotFoundException("Category", "categoryId", categoryId));
