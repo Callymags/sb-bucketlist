@@ -13,7 +13,7 @@ import java.time.LocalDate;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class BucketListExpDTO {
     private Long bucketListExperienceId;
-    private BucketListDTO bucketList;
+    private Long bucketListId;
     private ExperienceDTO experience;
     private LocalDate dateSaved;
     private boolean completed;

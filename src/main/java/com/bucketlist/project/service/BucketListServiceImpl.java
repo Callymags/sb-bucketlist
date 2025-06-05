@@ -167,13 +167,23 @@ public class BucketListServiceImpl implements BucketListService {
 
     private List<BucketListExpDTO> mapBucketListExps(List<BucketListExp> exps) {
         return exps.stream().map(exp -> {
-            ExperienceDTO experienceDTO = modelMapper.map(exp.getExperience(), ExperienceDTO.class);
+            Experience experience = exp.getExperience();
+
+            // Map base fields
+            ExperienceDTO experienceDTO = modelMapper.map(experience, ExperienceDTO.class);
+
+            experienceDTO.setCategoryName(experience.getCategory().getCategoryName());
+            experienceDTO.setCreatedBy(experience.getCreatedBy().getUsername());
+            experienceDTO.setLastModifiedBy(experience.getLastModifiedBy().getUsername());
+
+            // Build the BucketListExpDTO
             BucketListExpDTO dto = new BucketListExpDTO();
             dto.setBucketListExperienceId(exp.getBucketListExpId());
-            dto.setBucketList(null); // prevent recursion
+            dto.setBucketListId(exp.getBucketList().getBucketListId());
             dto.setExperience(experienceDTO);
             dto.setDateSaved(exp.getDateSaved());
             dto.setCompleted(exp.isCompleted());
+
             return dto;
         }).collect(Collectors.toList());
     }
