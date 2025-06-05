@@ -59,7 +59,7 @@ public class ExperienceServiceImpl implements ExperienceService {
         modelMapper.typeMap(Experience.class, ExperienceDTO.class).addMappings(mapper -> {
             mapper.map(src -> src.getCreatedBy().getUserId(), ExperienceDTO::setCreatedBy);
             mapper.map(src -> src.getLastModifiedBy().getUserId(), ExperienceDTO::setLastModifiedBy);
-            mapper.map(src -> src.getCategory().getCategoryId(), ExperienceDTO::setCategoryId);
+            mapper.map(src -> src.getCategory().getCategoryId(), ExperienceDTO::setCategoryName);
             mapper.map(Experience::getExperienceImage, ExperienceDTO::setExperienceImage); // optional
         });
     }
@@ -97,94 +97,74 @@ public class ExperienceServiceImpl implements ExperienceService {
     }
 
     @Override
+    public ExperienceDTO getExperienceById(Long experienceId) {
+        Experience experience = getExperienceEntityById(experienceId);
+        return mapExperience(experience);
+    }
+
+    @Override
     public ExperienceResponse getAllExperiences(Integer pageNumber, Integer pageSize, String sortBy, String sortOrder) {
-        Sort sortByAndOrder = sortOrder.equalsIgnoreCase("asc") ? Sort.by(sortBy).ascending()
-                : Sort.by(sortBy).descending();
+        Pageable pageable = PageRequest.of(pageNumber, pageSize, buildSort(sortBy, sortOrder));
+        Page<Experience> page = experienceRepository.findAll(pageable);
 
-        Pageable pageDetails = PageRequest.of(pageNumber, pageSize, sortByAndOrder);
-        Page<Experience> pageExperiences = experienceRepository.findAll(pageDetails);
-
-        List<Experience> experiences = pageExperiences.getContent();
-
-        List<ExperienceDTO> experienceDTOS = experiences.stream()
-                .map(experience -> modelMapper.map(experience, ExperienceDTO.class))
-                .collect(Collectors.toList());
-
-        if (experiences.isEmpty()){
+        if (page.isEmpty()) {
             throw new APIException("No experiences exist");
         }
 
-        ExperienceResponse experienceResponse = new ExperienceResponse();
-        experienceResponse.setContent(experienceDTOS);
-        experienceResponse.setPageNumber(pageExperiences.getNumber());
-        experienceResponse.setPageSize(pageExperiences.getSize());
-        experienceResponse.setTotalElements(pageExperiences.getTotalElements());
-        experienceResponse.setTotalPages(pageExperiences.getTotalPages());
-        experienceResponse.setLastPage(pageExperiences.isLast());
-        return experienceResponse;
+        List<ExperienceDTO> experienceDTOS = mapExperiences(page.getContent());
+        return buildExperienceResponse(page, experienceDTOS);
     }
+
+    @Override
+    public ExperienceResponse getExperiencesCreatedByUser(Long userId, Integer pageNumber, Integer pageSize, String sortBy, String sortOrder) {
+        User currentUser = authUtil.loggedInUser();
+
+        User resourceOwner = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User", "userId", userId));
+
+        authUtil.checkOwnerOrAdmin(currentUser, resourceOwner, "experience", "view");
+
+
+        Pageable pageable = PageRequest.of(pageNumber, pageSize, buildSort(sortBy, sortOrder));
+        Page<Experience> page = experienceRepository.findByCreatedBy(currentUser, pageable);
+
+        List<ExperienceDTO> experienceDTOS = mapExperiences(page.getContent());
+        return buildExperienceResponse(page, experienceDTOS);
+    }
+
 
     @Override
     public ExperienceResponse searchByCategory(Long categoryId, Integer pageNumber, Integer pageSize, String sortBy, String sortOrder) {
         Category category = categoryRepository.findById(categoryId)
                 .orElseThrow(() -> new ResourceNotFoundException("Category", "categoryId", categoryId));
 
-        Sort sortByAndOrder = sortOrder.equalsIgnoreCase("asc") ? Sort.by(sortBy).ascending()
-                : Sort.by(sortBy).descending();
+        Pageable pageable = PageRequest.of(pageNumber, pageSize, buildSort(sortBy, sortOrder));
+        Page<Experience> page = experienceRepository.findByCategory(category, pageable);
 
-        Pageable pageDetails = PageRequest.of(pageNumber, pageSize, sortByAndOrder);
-        Page<Experience> pageExperiences = experienceRepository.findByCategory(category, pageDetails);
-
-        List<Experience> experiences = pageExperiences.getContent();
-
-        if (experiences.isEmpty()) {
+        if (page.isEmpty()) {
             throw new APIException("No experiences found for the given category");
         }
 
-        List<ExperienceDTO> experienceDTOS = experiences.stream()
-                .map(experience -> modelMapper.map(experience, ExperienceDTO.class))
-                .collect(Collectors.toList());
-
-        ExperienceResponse experienceResponse = new ExperienceResponse();
-        experienceResponse.setContent(experienceDTOS);
-        experienceResponse.setPageNumber(pageExperiences.getNumber());
-        experienceResponse.setPageSize(pageExperiences.getSize());
-        experienceResponse.setTotalElements(pageExperiences.getTotalElements());
-        experienceResponse.setTotalPages(pageExperiences.getTotalPages());
-        experienceResponse.setLastPage(pageExperiences.isLast());
-        return experienceResponse;
+        List<ExperienceDTO> experienceDTOS = mapExperiences(page.getContent());
+        return buildExperienceResponse(page, experienceDTOS);
     }
 
     @Override
     public ExperienceResponse searchExperienceByKeyword(String keyword, Integer pageNumber, Integer pageSize, String sortBy, String sortOrder) {
-        Sort sortByAndOrder = sortOrder.equalsIgnoreCase("asc") ? Sort.by(sortBy).ascending()
-                : Sort.by(sortBy).descending();
+        Pageable pageable = PageRequest.of(pageNumber, pageSize, buildSort(sortBy, sortOrder));
+        Page<Experience> page = experienceRepository.findByExperienceNameLikeIgnoreCase('%' + keyword + '%', pageable);
 
-        Pageable pageDetails = PageRequest.of(pageNumber, pageSize, sortByAndOrder);
-        Page<Experience> pageExperiences = experienceRepository.findByExperienceNameLikeIgnoreCase('%' + keyword + '%', pageDetails);
-
-        List<Experience> experiences = pageExperiences.getContent();
-        List<ExperienceDTO> experienceDTOS = experiences.stream()
-                .map(experience -> modelMapper.map(experience, ExperienceDTO.class))
-                .collect(Collectors.toList());
-
-        if (experiences.isEmpty()){
+        if (page.isEmpty()) {
             throw new APIException("Experiences not found with keyword: " + keyword);
         }
 
-        ExperienceResponse experienceResponse = new ExperienceResponse();
-        experienceResponse.setContent(experienceDTOS);
-        experienceResponse.setPageNumber(pageExperiences.getNumber());
-        experienceResponse.setPageSize(pageExperiences.getSize());
-        experienceResponse.setTotalElements(pageExperiences.getTotalElements());
-        experienceResponse.setTotalPages(pageExperiences.getTotalPages());
-        experienceResponse.setLastPage(pageExperiences.isLast());
-        return experienceResponse;
+        List<ExperienceDTO> experienceDTOS = mapExperiences(page.getContent());
+        return buildExperienceResponse(page, experienceDTOS);
     }
 
     @Override
     public ExperienceDTO updateExperience(Long experienceId, ExperienceDTO experienceDTO) {
-        Experience experienceFromDB = getExperienceById(experienceId);
+        Experience experienceFromDB = getExperienceEntityById(experienceId);
         User currentUser = authUtil.loggedInUser();
         authUtil.checkOwnerOrAdmin(currentUser, experienceFromDB.getCreatedBy(), "experience", "update");
 
@@ -198,13 +178,12 @@ public class ExperienceServiceImpl implements ExperienceService {
         Experience savedExperience = experienceRepository.save(experienceFromDB);
 
         return modelMapper.map(savedExperience, ExperienceDTO.class);
-
     }
 
     @Override
     @Transactional
     public ExperienceDTO deleteExperience(Long experienceId) {
-        Experience experience = getExperienceById(experienceId);
+        Experience experience = getExperienceEntityById(experienceId);
 
         User currentUser = authUtil.loggedInUser();
         authUtil.checkOwnerOrAdmin(currentUser, experience.getCreatedBy(), "experience", "delete");
@@ -220,7 +199,7 @@ public class ExperienceServiceImpl implements ExperienceService {
 
     @Override
     public ExperienceDTO updateExperienceImage(Long experienceId, MultipartFile image) throws IOException {
-        Experience experience = getExperienceById(experienceId);
+        Experience experience = getExperienceEntityById(experienceId);
         User currentUser = authUtil.loggedInUser();
         authUtil.checkOwnerOrAdmin(currentUser, experience.getCreatedBy(), "experience", "update");
 
@@ -231,9 +210,47 @@ public class ExperienceServiceImpl implements ExperienceService {
         return modelMapper.map(updatedExperience, ExperienceDTO.class);
     }
 
-    private Experience getExperienceById(Long experienceId) {
+    private Experience getExperienceEntityById(Long experienceId) {
         return experienceRepository.findById(experienceId)
                 .orElseThrow(() -> new ResourceNotFoundException("Experience", "experienceId", experienceId));
     }
+
+    private ExperienceDTO mapExperience(Experience experience) {
+        ExperienceDTO dto = new ExperienceDTO();
+        dto.setExperienceId(experience.getExperienceId());
+        dto.setExperienceName(experience.getExperienceName());
+        dto.setCategoryName(experience.getCategory().getCategoryName());
+        dto.setExperienceImage(experience.getExperienceImage());
+        dto.setDescription(experience.getDescription());
+        dto.setCreatedBy(
+                experience.getCreatedBy() != null ? experience.getCreatedBy().getUsername() : "Unknown"
+        );
+        dto.setLastModifiedBy(
+                experience.getLastModifiedBy() != null ? experience.getLastModifiedBy().getUsername() : "Unknown"
+        );
+        return dto;
+    }
+
+    private List<ExperienceDTO> mapExperiences(List<Experience> experiences) {
+        return experiences.stream().map(this::mapExperience).collect(Collectors.toList());
+    }
+
+    private Sort buildSort(String sortBy, String sortOrder) {
+        return sortOrder.equalsIgnoreCase("asc")
+                ? Sort.by(sortBy).ascending()
+                : Sort.by(sortBy).descending();
+    }
+
+    private ExperienceResponse buildExperienceResponse(Page<?> page, List<ExperienceDTO> experienceDTOS) {
+        ExperienceResponse response = new ExperienceResponse();
+        response.setContent(experienceDTOS);
+        response.setPageNumber(page.getNumber());
+        response.setPageSize(page.getSize());
+        response.setTotalElements(page.getTotalElements());
+        response.setTotalPages(page.getTotalPages());
+        response.setLastPage(page.isLast());
+        return response;
+    }
+
 
 }

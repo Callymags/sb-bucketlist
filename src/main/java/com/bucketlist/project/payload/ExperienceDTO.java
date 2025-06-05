@@ -10,10 +10,10 @@ import lombok.NoArgsConstructor;
 public class ExperienceDTO {
     private Long experienceId;
     private String experienceName;
-    private Long categoryId;
+    private String categoryName;
     private String experienceImage;
     private String description;
-    private Long createdBy;
-    private Long lastModifiedBy;
+    private String createdBy;
+    private String lastModifiedBy;
 
 }

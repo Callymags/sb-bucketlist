@@ -8,7 +8,6 @@ import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -29,6 +28,12 @@ public class ExperienceController {
         return new ResponseEntity<>(savedExperienceDTO, HttpStatus.CREATED);
     }
 
+    @GetMapping("/experiences/{experienceId}")
+    public ResponseEntity<ExperienceDTO> getExperienceById(@PathVariable Long experienceId) {
+        ExperienceDTO experienceDTO = experienceService.getExperienceById(experienceId);
+        return new ResponseEntity<>(experienceDTO, HttpStatus.OK);
+    }
+
     @GetMapping("/experiences")
     public ResponseEntity<ExperienceResponse> getAllExperiences(
             @RequestParam(name = "pageNumber", defaultValue = AppConstants.PAGE_NUMBER, required = false) Integer pageNumber,
@@ -38,6 +43,18 @@ public class ExperienceController {
     ) {
         ExperienceResponse experienceResponse = experienceService.getAllExperiences(pageNumber, pageSize, sortBy, sortOrder);
         return new ResponseEntity<>(experienceResponse, HttpStatus.OK);
+    }
+
+    @GetMapping("/users/{userId}/experiences")
+    public ResponseEntity<ExperienceResponse> getExperiencesByUser(
+            @PathVariable Long userId,
+            @RequestParam(name = "pageNumber", defaultValue = AppConstants.PAGE_NUMBER, required = false) Integer pageNumber,
+            @RequestParam(name = "pageSize", defaultValue = AppConstants.PAGE_SIZE, required = false) Integer pageSize,
+            @RequestParam(name = "sortBy", defaultValue = AppConstants.SORT_EXPERIENCES_BY, required = false) String sortBy,
+            @RequestParam(name = "sortOrder", defaultValue = AppConstants.SORT_EXPERIENCES_ORDER, required = false) String sortOrder
+    ) {
+        ExperienceResponse experiences = experienceService.getExperiencesCreatedByUser(userId, pageNumber, pageSize, sortBy, sortOrder);
+        return new ResponseEntity<>(experiences, HttpStatus.OK);
     }
 
     @GetMapping("/categories/{categoryId}/experiences")
