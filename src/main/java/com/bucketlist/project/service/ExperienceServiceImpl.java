@@ -155,7 +155,7 @@ public class ExperienceServiceImpl implements ExperienceService {
         Page<Experience> page = experienceRepository.findByExperienceNameLikeIgnoreCase('%' + keyword + '%', pageable);
 
         if (page.isEmpty()) {
-            throw new APIException("Experiences not found with keyword: " + keyword);
+            throw new APIException("ExperiencesCard not found with keyword: " + keyword);
         }
 
         List<ExperienceDTO> experienceDTOS = mapExperiences(page.getContent());
