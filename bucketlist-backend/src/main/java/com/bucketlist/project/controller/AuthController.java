@@ -1,8 +1,10 @@
 package com.bucketlist.project.controller;
 
 import com.bucketlist.project.model.AppRole;
+import com.bucketlist.project.model.BucketList;
 import com.bucketlist.project.model.Role;
 import com.bucketlist.project.model.User;
+import com.bucketlist.project.repositories.BucketListRepository;
 import com.bucketlist.project.repositories.RoleRepository;
 import com.bucketlist.project.repositories.UserRepository;
 import com.bucketlist.project.security.jwt.JwtUtils;
@@ -48,6 +50,9 @@ public class AuthController {
 
     @Autowired
     PasswordEncoder passwordEncoder;
+
+    @Autowired
+    BucketListRepository bucketListRepository;
 
     @PostMapping("/signIn")
     public ResponseEntity<?> authenticateUser(@RequestBody LoginRequest loginRequest) {
@@ -113,6 +118,11 @@ public class AuthController {
 
         user.setRole(role);
         userRepository.save(user);
+
+        // Create empty bucket list
+        BucketList newBucketList = new BucketList();
+        newBucketList.setUser(user);
+        bucketListRepository.save(newBucketList);
 
         return ResponseEntity.ok(new MessageResponse("User registered successfully!"));
     }

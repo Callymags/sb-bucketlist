@@ -1,24 +1,37 @@
-# Default ignored files
-/shelf/
-/.idea/workspace.xml
-# Editor-based HTTP Client requests
-/httpRequests/
-# Datasource local storage ignored files
-/dataSources/
-/dataSources.local.xml
-# Ignore IntelliJ IDEA project files
+# === GLOBAL IGNORES ===
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# System/Editor Files
+.DS_Store
 .idea/
-*.iml
-# Ignore target directory
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+.vscode/*
+!.vscode/extensions.json
+
+# === FRONTEND-SPECIFIC ===
+node_modules/
+dist/
+dist-ssr/
+*.local
+bucketlist-frontend/.env
+
+# === BACKEND-SPECIFIC ===
 target/
-# Ignore Maven wrapper properties
-.mvn/wrapper/maven-wrapper.properties
-# Ignore Maven config
-.mvn/maven.config
-# Ignore env file
-.env
-# Ignore uploads
-uploads/*.jpeg
-# Ignore Maven wrapper files
-mvnw
-mvnw.cmd
+bucketlist-backend/.mvn/
+bucketlist-backend/.env
+bucketlist-backend/mvnw
+bucketlist-backend/mvnw.cmd
+
+# Ignore uploads folder content
+bucketlist-backend/uploads/*
+!bucketlist-backend/uploads/.gitkeep

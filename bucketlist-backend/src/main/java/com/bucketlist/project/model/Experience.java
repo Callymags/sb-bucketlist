@@ -21,7 +21,7 @@ public class Experience {
     private Long experienceId;
 
     @NotBlank
-    @Size(min = 3, message = "Experience name must contain at least three characters")
+    @Size(min = 3, max = 80, message = "Experience name must contain at least three characters")
     private String experienceName;
 
     @ManyToOne

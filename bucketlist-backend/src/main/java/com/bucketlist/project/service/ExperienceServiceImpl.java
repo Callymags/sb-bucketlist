@@ -107,10 +107,6 @@ public class ExperienceServiceImpl implements ExperienceService {
         Pageable pageable = PageRequest.of(pageNumber, pageSize, buildSort(sortBy, sortOrder));
         Page<Experience> page = experienceRepository.findAll(pageable);
 
-        if (page.isEmpty()) {
-            throw new APIException("No experiences exist");
-        }
-
         List<ExperienceDTO> experienceDTOS = mapExperiences(page.getContent());
         return buildExperienceResponse(page, experienceDTOS);
     }
@@ -141,10 +137,6 @@ public class ExperienceServiceImpl implements ExperienceService {
         Pageable pageable = PageRequest.of(pageNumber, pageSize, buildSort(sortBy, sortOrder));
         Page<Experience> page = experienceRepository.findByCategory(category, pageable);
 
-        if (page.isEmpty()) {
-            throw new APIException("No experiences found for the given category");
-        }
-
         List<ExperienceDTO> experienceDTOS = mapExperiences(page.getContent());
         return buildExperienceResponse(page, experienceDTOS);
     }
@@ -153,10 +145,6 @@ public class ExperienceServiceImpl implements ExperienceService {
     public ExperienceResponse searchExperienceByKeyword(String keyword, Integer pageNumber, Integer pageSize, String sortBy, String sortOrder) {
         Pageable pageable = PageRequest.of(pageNumber, pageSize, buildSort(sortBy, sortOrder));
         Page<Experience> page = experienceRepository.findByExperienceNameLikeIgnoreCase('%' + keyword + '%', pageable);
-
-        if (page.isEmpty()) {
-            throw new APIException("ExperiencesCard not found with keyword: " + keyword);
-        }
 
         List<ExperienceDTO> experienceDTOS = mapExperiences(page.getContent());
         return buildExperienceResponse(page, experienceDTOS);
