@@ -10,6 +10,7 @@ lerna-debug.log*
 # System/Editor Files
 .DS_Store
 .idea/
+*.iml
 *.suo
 *.ntvs*
 *.njsproj
